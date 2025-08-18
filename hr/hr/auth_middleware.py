@@ -3,6 +3,7 @@ from .local_settings import AUTH_SERVICE
 from django.shortcuts import redirect
 import threading
 import requests
+from .thread_locals import *
 from django.http import JsonResponse
 
 # Thread-local storage untuk simpan user_id
@@ -20,6 +21,7 @@ class VerifyAuthTokenMiddleware:
     def __call__(self, request):
         # Default: user belum login
         _thread_locals.user_id = None
+        set_current_user_id(None)  
 
         # Lewatkan path yang nggak butuh autentikasi
         if request.path.startswith(("/api/docs/", "/api/schema/", "/admin/")):
@@ -27,8 +29,9 @@ class VerifyAuthTokenMiddleware:
 
         # Ambil token dari header
         auth_header = request.headers.get("Authorization", "")
+
         if not auth_header.startswith("Token "):
-            return JsonResponse({'detail': 'Token mana token?'}, status=401)
+            return JsonResponse({'detail': "Token doesn't match. Please check your token or contact support if needed."}, status=401)
 
         token = auth_header.split(" ", 1)[1]
 
@@ -41,9 +44,11 @@ class VerifyAuthTokenMiddleware:
             )
             if resp.status_code != 200:
                 return JsonResponse({"detail": "Invalid token"}, status=401)
-
-            data = resp.json()
-            _thread_locals.user_id = data.get("user_id")
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                _thread_locals.user_id = data.get("user_id")
+                set_current_user_id(data.get('user_id'))
         except requests.RequestException:
             return JsonResponse({"detail": "Cannot reach AUTH_SERVICE"}, status=503)
 
@@ -63,6 +68,7 @@ class AuthServiceBackend:
 
             if login_res.status_code == 200:
                 data = login_res.json()
+                print(data)
 
                 # Simpan token & cookies di session Django
                 request.session["auth_token"] = data.get("token")

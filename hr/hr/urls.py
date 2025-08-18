@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from hr_master.views import *
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 router = DefaultRouter()
 
@@ -30,7 +30,7 @@ router.register(r'master/level', LevelViewSet)
 router.register(r'master/employment-type', EmploymentTypeViewSet)
 router.register(r'master/shift', ShiftViewSet)
 router.register(r'master/branch', BranchViewSet)
-router.register(r'master/employee', EmployeeViewset)
+router.register(r'master/employee', EmployeeViewSet)
 
 # HR_TRANSACTION
 
@@ -39,5 +39,5 @@ urlpatterns = [
     path('api/hr/', include(router.urls)),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularRedocView.as_view(url_name='schema'), name='swager-ui'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swager-ui'),
 ]

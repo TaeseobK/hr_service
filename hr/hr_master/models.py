@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from hr.config import BaseModel
 
 class Company(BaseModel) :
@@ -14,12 +13,15 @@ class Company(BaseModel) :
 
     logo = models.ImageField(upload_to='company_logos/', null=True, blank=True)
 
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
         db_table = 'companies'
         managed = True
         verbose_name_plural = 'Companies'
+        indexes = [
+            models.Index(fields=['parent'])
+        ]
     
     def __str__(self):
         return self.name
@@ -28,12 +30,15 @@ class Unit(BaseModel) :
     name = models.CharField(max_length=64)
     code = models.CharField(max_length=24, unique=True)
 
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
         db_table = 'units'
         managed = True
         verbose_name_plural = 'Units'
+        indexes = [
+            models.Index(fields=['parent'])
+        ]
     
     def __str__(self):
         return self.name
@@ -42,12 +47,15 @@ class Level(BaseModel) :
     name = models.CharField(max_length=32)
     code = models.CharField(max_length=24, unique=True)
 
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
         db_table = 'levels'
         managed = True
         verbose_name_plural = 'Levels'
+        indexes = [
+            models.Index(fields=['parent'])
+        ]
     
     def __str__(self):
         return self.name
@@ -88,6 +96,10 @@ class Shift(BaseModel) :
         db_table = 'shift'
         managed = True
         verbose_name_plural = 'Shifts'
+        indexes = [
+            models.Index(fields=['start_day', 'start_time']),
+            models.Index(fields=['end_day', 'end_time']),
+        ]
     
     def __str__(self):
         return f"{self.name} - {self.code}"
@@ -107,12 +119,15 @@ class Branch(BaseModel) :
         db_table = 'branch'
         managed = True
         verbose_name_plural = 'Branches'
+        indexes = [
+            models.Index(fields=['code'])
+        ]
     
     def __str__(self):
         return f"{self.name} - {self.code}"
     
 class Employee(BaseModel) :
-    user_id = models.IntegerField()
+    user_id = models.IntegerField(db_index=True)
     nik = models.IntegerField()
     code = models.CharField(max_length=24, unique=True)
     full_name = models.CharField(max_length=128)
@@ -138,18 +153,19 @@ class Employee(BaseModel) :
     job = models.CharField(max_length=36, null=True, blank=True)
     citizenship = models.CharField(max_length=36, null=True, blank=True)
 
-    company = models.ForeignKey('Company', on_delete=models.CASCADE)
-    branch = models.ForeignKey('Branch', on_delete=models.CASCADE)
+    company = models.ForeignKey('Company', on_delete=models.CASCADE, db_index=True)
+    branch = models.ForeignKey('Branch', on_delete=models.CASCADE, db_index=True)
     unit = models.ManyToManyField('Unit', related_name='units')
-    level = models.ForeignKey('Level', on_delete=models.CASCADE)
-    employment_type = models.ForeignKey('EmploymentType', on_delete=models.CASCADE)
-    shift = models.ForeignKey('Shift', on_delete=models.CASCADE)
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    level = models.ForeignKey('Level', on_delete=models.CASCADE, db_index=True)
+    employment_type = models.ForeignKey('EmploymentType', on_delete=models.CASCADE, db_index=True)
+    shift = models.ForeignKey('Shift', on_delete=models.CASCADE, db_index=True)
 
-    talenta_id = models.IntegerField(null=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children', db_index=True)
 
-    hire_date = models.DateField(null=True, blank=True)
-    resign_date = models.DateField(null=True, blank=True)
+    talenta_id = models.IntegerField(null=True, blank=True, db_index=True)
+
+    hire_date = models.DateField(null=True, blank=True, db_index=True)
+    resign_date = models.DateField(null=True, blank=True, db_index=True)
 
     description = models.TextField(null=True, blank=True)
 
@@ -157,6 +173,10 @@ class Employee(BaseModel) :
         db_table = 'employee'
         managed = True
         verbose_name_plural = 'Employees'
+        indexes = [
+            models.Index(fields=['company', 'branch']),
+            models.Index(fields=['level'])
+        ]
     
     def __str__(self):
         return f"{self.full_name} - {self.code}"

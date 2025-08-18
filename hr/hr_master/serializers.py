@@ -188,6 +188,7 @@ class ShiftSerializer(serializers.ModelSerializer) :
         fields = '__all__'
 
 class BranchSerializer(serializers.ModelSerializer) :
+    company = CompanySerializer(many=True, read_only=True)
     class Meta:
         model = Branch
         fields = '__all__'

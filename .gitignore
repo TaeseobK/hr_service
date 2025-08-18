@@ -28,6 +28,8 @@ MANIFEST
 **/databases/**
 my_note
 
+**/dumps/**
+
 **/migrations/**
 !**/__init__.py
 

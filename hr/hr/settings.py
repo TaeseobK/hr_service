@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'hr_master',
+    'hr_dump',
+    'hr.core',
 ]
 
 REST_FRAMEWORK = {
@@ -111,6 +113,7 @@ DATABASES = DATABASE_SERVICE
 
 DATABASE_ROUTERS = [
     'hr_master.routers.HrMasterRouter',
+    'hr_dump.routers.HrDumpRouter',
 ]
 
 # Password validation
@@ -137,7 +140,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Jakarta'
 
 USE_I18N = True
 

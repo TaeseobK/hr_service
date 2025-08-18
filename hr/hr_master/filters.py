@@ -1,122 +1,84 @@
 import django_filters
 from .models import *
+from hr.config import *
 
-class CompanyFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    parent_name = django_filters.CharFilter(field_name='parent__name', lookup_expr='icontains')
-    children_name = django_filters.CharFilter(field_name='children__name', lookup_expr='icontains')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
-    parent_isnull = django_filters.BooleanFilter(field_name='parent', lookup_expr='isnull')
+class CompanyFilter(BaseFilter) :
+    legal_name = django_filters.CharFilter(field_name='legal_name', lookup_expr='iexact')
+    npwp = django_filters.CharFilter(field_name='npwp', lookup_expr='exact')
+    email = django_filters.CharFilter(field_name='email', lookup_expr='iexact')
+    website = django_filters.CharFilter(field_name='website', lookup_expr='iexact')
 
     class Meta:
         model = Company
-        fields = ['name', 'code', 'is_active', 'parent_isnull', 'parent_name', 'children_name']
+        fields = []
 
-class UnitFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    parent_name = django_filters.CharFilter(field_name='parent__name', lookup_expr='icontains')
-    children_name = django_filters.CharFilter(field_name='children__name', lookup_expr='icontains')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
-    parent_isnull = django_filters.BooleanFilter(field_name='parent', lookup_expr='isnull')
-
+class UnitFilter(BaseFilter) :
     class Meta:
         model = Unit
-        fields = ['name', 'code', 'is_active', 'parent_isnull', 'parent_name', 'children_name']
+        fields = []
 
-class LevelFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    parent_name = django_filters.CharFilter(field_name='parent__name', lookup_expr='icontains')
-    children_name = django_filters.CharFilter(field_name='children__name', lookup_expr='icontains')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
-    parent_isnull = django_filters.BooleanFilter(field_name='parent', lookup_expr='isnull')
-
+class LevelFilter(BaseFilter) :
     class Meta:
         model = Level
-        fields = ['name', 'code', 'is_active', 'parent_isnull', 'parent_name', 'children_name']
+        fields = []
 
-class EmploymentTypeFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
-
+class EmploymentTypeFilter(BaseFilter) :
     class Meta:
         model = EmploymentType
-        fields = ['name', 'code', 'is_active']
+        fields = []
 
-class ShiftFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    start_day = django_filters.NumberFilter(field_name='start_day', lookup_expr='week_day')
-    start_time = django_filters.TimeRangeFilter(field_name='start_time', lookup_expr='iexact')
-    end_day = django_filters.NumberFilter(field_name='end_day', lookup_expr='week_day')
-    end_time = django_filters.TimeRangeFilter(field_name='end_time', lookup_expr='iexact')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
+class ShiftFilter(BaseFilter) :
+    start_day = django_filters.NumberFilter(field_name='start_day', lookup_expr='exact')
+    end_day = django_filters.NumberFilter(field_name='end_day', lookup_expr='exact')
+
+    start_time_gte = django_filters.TimeFilter(field_name='start_time', lookup_expr='gte')
+    start_time_lte = django_filters.TimeFilter(field_name='start_time', lookup_expr='lte')
+
+    end_time_gte = django_filters.TimeFilter(field_name='end_time', lookup_expr='gte')
+    end_time_lte = django_filters.TimeFilter(field_name='end_time', lookup_expr='lte')
 
     class Meta:
         model = Shift
-        fields = ['name', 'code', 'start_day', 'start_time', 'end_day', 'end_time', 'is_active']
+        fields = []
 
-class BranchFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='iexact')
-    company_name = django_filters.CharFilter(field_name='company__name', lookup_expr='icontains')
-    company_id = django_filters.NumberFilter(field_name='company', lookup_expr='exact')
-    city = django_filters.CharFilter(field_name='city', lookup_expr='icontains')
-    province = django_filters.CharFilter(field_name='province', lookup_expr='icontains')
-    is_active = django_filters.BooleanFilter(field_name='is_active')
+class BranchFilter(BaseFilter) :
+    city = django_filters.CharFilter(field_name='city', lookup_expr='iexact')
+    province = django_filters.CharFilter(field_name='province', lookup_expr='iexact')
+    postal_code = django_filters.CharFilter(field_name='postal_code', lookup_expr='iexact')
 
     class Meta:
         model = Branch
-        fields = ['name', 'code', 'city', 'province', 'company_name', 'is_active', 'company_id']
+        fields = []
 
-class EmployeeFilter(django_filters.FilterSet) :
-    id = django_filters.NumberFilter(field_name='id')
-    full_name = django_filters.CharFilter(field_name='full_name', lookup_expr='icontains')
-    province = django_filters.CharFilter(field_name='province', lookup_expr='icontains')
-    city = django_filters.CharFilter(field_name='municipality', lookup_expr='icontains')
-    religion = django_filters.CharFilter(field_name='religion', lookup_expr='icontains')
-    marital_status = django_filters.CharFilter(field_name='marital_status', lookup_expr='icontains')
-    birthplace = django_filters.CharFilter(field_name='birthplace', lookup_expr='icontains')
-    code = django_filters.CharFilter(field_name='code', lookup_expr='icontains')
-    nik = django_filters.NumberFilter(field_name='nik', lookup_expr='startswith')
+class EmployeeFilter(BaseFilter) :
+    user_id = django_filters.NumberFilter(field_name='user_id', lookup_expr='exact')
+    nik = django_filters.NumberFilter(field_name='nik', lookup_expr='exact')
 
-    parent_full_name = django_filters.CharFilter(field_name='parent__full_name', lookup_expr='icontains')
-    children_full_name = django_filters.CharFilter(field_name='children__full_name', lookup_expr='icontains')
-    company_name = django_filters.CharFilter(field_name='company__name', lookup_expr='icontains')
-    branch_name = django_filters.CharFilter(field_name='branch__name', lookup_expr='icontains')
-    unit_name = django_filters.CharFilter(field_name='unit__name', lookup_expr='icontains')
-    level_name = django_filters.CharFilter(field_name='level__name', lookup_expr='icontains')
-    employment_type_name = django_filters.CharFilter(field_name='employment_type__name', lookup_expr='icontains')
-    shift_name = django_filters.CharFilter(field_name='shift__name', lookup_expr='icontains')
+    village = django_filters.CharFilter(field_name='village', lookup_expr='iexact')
+    district = django_filters.CharFilter(field_name='district', lookup_expr='iexact')
+    city = django_filters.CharFilter(field_name='city', lookup_expr='iexact')
+    province = django_filters.CharFilter(field_name='province', lookup_expr='iexact')
+    postal_code = django_filters.CharFilter(field_name='postal_code', lookup_expr='iexact')
 
-    parent_id = django_filters.NumberFilter(field_name='parent', lookup_expr='exact')
-    children_id = django_filters.NumberFilter(field_name='children', lookup_expr='exact')
-    company_id = django_filters.NumberFilter(field_name='company', lookup_expr='exact')
-    branch_id = django_filters.NumberFilter(field_name='branch', lookup_expr='exact')
-    unit_id = django_filters.NumberFilter(field_name='unit', lookup_expr='exact')
-    level_id = django_filters.NumberFilter(field_name='level', lookup_expr='exact')
-    employment_type_id = django_filters.NumberFilter(field_name='employment_type', lookup_expr='exact')
-    shift_id = django_filters.NumberFilter(field_name='shift', lookup_expr='exact')
+    religion = django_filters.CharFilter(field_name='religion', lookup_expr='iexact')
+    marital_status = django_filters.CharFilter(field_name='marital_status', lookup_expr='iexact')
+    job = django_filters.CharFilter(field_name='job', lookup_expr='iexact')
+    citizenship = django_filters.CharFilter(field_name='citizenship', lookup_expr='iexact')
+
     talenta_id = django_filters.NumberFilter(field_name='talenta_id', lookup_expr='exact')
-
-    user_id = django_filters.NumberFilter(field_name='user_id')
-    parent_isnull = django_filters.BooleanFilter(field_name='parent', lookup_expr='isnull')
-
+    
+    hire_date = django_filters.DateFilter(field_name='hire_date', lookup_expr='exact')
+    resign_date = django_filters.DateFilter(field_name='resign_date', lookup_expr='exact')
     class Meta:
         model = Employee
-        fields = [
-            'full_name', 'province', 'city', 'religion', 'parent_id', 'talenta_id',
-            'marital_status', 'birthplace', 'code', 'nik', 'children_id',
-            'parent_full_name', 'children_full_name', 'company_name', 'branch_name', 'company_id',
-            'unit_name', 'level_name', 'employment_type_name', 'shift_name', 'branch_id',
-            'user_id', 'parent_isnull', 'unit_id', 'level_id', 'employment_type_id', 'shift_id' 
-        ]
+        fields = []
+
+
+#Init init doang ini mah
+CompanyFilter.init_dynamic(Company)
+UnitFilter.init_dynamic(Unit)
+LevelFilter.init_dynamic(Level)
+EmploymentTypeFilter.init_dynamic(EmploymentType)
+ShiftFilter.init_dynamic(Shift)
+BranchFilter.init_dynamic(Branch)
+EmployeeFilter.init_dynamic(Employee)
