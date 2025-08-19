@@ -1,170 +1,207 @@
-# HR Service API
+# HR Service
 
-## Introduction
-The **HR Service API** is a Django-based backend application that provides RESTful endpoints for managing HR-related data.  
-It integrates with an external **Auth Service** for authentication, uses **DRF Spectacular** for API documentation, and supports powerful filtering and field selection.  
-
-Main components:
-- **`hr_master` app**: Handles HR database models.
-- **Custom middleware**: Validates tokens with Auth Service.
-- **Database router**: Routes requests to the HR-specific database.
+A Django-based **HR (Human Resources) Service** that manages employee-related data and connects to multiple HR databases. This service integrates with external **Auth Service** and **Finance Service** for authentication, authorization, and extended functionality. APIs are secured with token-based authentication and documented with **drf-spectacular**.
 
 ---
 
-## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Features](#features)
-- [Dependencies](#dependencies)
-- [Configuration](#configuration)
-- [API Endpoints](#api-endpoints)
-- [API Documentation](#api-documentation)
-- [Troubleshooting](#troubleshooting)
+## 📑 Table of Contents
+
+1. [Introduction](#introduction)  
+2. [Features](#features)  
+3. [Architecture](#architecture)  
+4. [Installation](#installation)  
+5. [Configuration](#configuration)  
+6. [Usage](#usage)  
+7. [API Documentation](#api-documentation)  
+8. [Database](#database)  
+9. [Troubleshooting](#troubleshooting)  
+10. [Contributors](#contributors)  
+11. [License](#license)  
 
 ---
 
-## Installation
+## 📖 Introduction
+
+The **HR Service** is a backend microservice that provides structured APIs for managing HR-related data such as employee records, master data, and historical HR dumps. It integrates with:
+
+- **Auth Service** → for authentication and token verification.  
+- **Finance Service** → for connecting HR and financial data when needed.  
+
+This service supports **multiple database routing**, ensuring HR master and dump data are stored and accessed separately.
+
+---
+
+## ✨ Features
+
+- Built with **Django 5.2.5** and **Django REST Framework**.  
+- **Multiple database support** with custom routers (`hr_master`, `hr_dump`).  
+- Token-based authentication validated against an **external Auth Service**.  
+- Integration with **Finance Service** for cross-service data sharing.  
+- Custom middleware for authentication (`VerifyAuthTokenMiddleware`, `AuthServiceLogoutMiddleware`).  
+- Auto-generated **OpenAPI 3.0 schema** via `drf-spectacular`.  
+- Secure password validation rules enabled.  
+- Configurable settings via `local_settings.py`.  
+
+---
+
+## 🏛 Architecture
+
+- **Framework:** Django (WSGI application).  
+- **API Layer:** Django REST Framework (DRF).  
+- **Documentation:** drf-spectacular + drf-spectacular-sidecar.  
+- **Authentication:** Delegated to external Auth Service.  
+- **Databases:**  
+  - `default` → Auth database (users & auth tokens).  
+  - `hr_master` → Main HR database (core employee data).  
+  - `hr_dump` → Archived HR database (historical/dump data).  
+- **Middleware:**  
+  - `VerifyAuthTokenMiddleware` – validates tokens with Auth Service.  
+  - `AuthServiceLogoutMiddleware` – syncs logout events with Auth Service.  
+
+---
+
+## ⚙️ Installation
+
+### 1. Clone the repository
 ```bash
-git clone <repository_url>
-cd <project_directory>
+git clone https://github.com/your-repo/hr-service.git
+cd hr-service
+```
+
+### 2. Create and activate a virtual environment
+```bash
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate   # On Linux / Mac
+venv\Scripts\activate      # On Windows
+```
+
+### 3. Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### Configure environment variables
-Create a `local_settings.py` file in the `hr` directory:
-```python
-DEBUG_ = True
-AUTH_SERVICE = "http://auth-service-url"
-DATABASE_SERVICE = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'hr_db',
-        'USER': 'user',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-```
-
-### Run migrations
+### 4. Apply database migrations
 ```bash
 python manage.py migrate
 ```
 
----
-
-## Usage
-- Start the server:
+### 5. Run the development server
 ```bash
 python manage.py runserver
 ```
-- Admin Panel:  
-  ```
-  http://127.0.0.1:8000/admin/
-  ```
-- API Root:  
-  ```
-  http://127.0.0.1:8000/api/hr/
-  ```
 
 ---
 
-## Features
-- Token-based authentication via external Auth Service.
-- Detailed filtering, searching, and ordering.
-- Ability to select (`fields`) or exclude (`exclude`) specific fields.
-- Pagination with total pages and current page.
-- Auto-generated API schema & ReDoc docs.
+## 🔧 Configuration
 
----
+Settings are split across two files:
 
-## Dependencies
-- Python 3.x
-- Django 5.2.5
-- Django REST Framework
-- drf-spectacular
-- drf-spectacular-sidecar
-- django-filter
+- **`settings.py`** – Core project settings.  
+- **`local_settings.py`** – Environment-specific overrides.  
 
----
+### Example `local_settings.py`
+```python
+from pathlib import Path
 
-## Configuration
-- `DJANGO_SETTINGS_MODULE` → Defaults to `hr.settings`.
-- Middleware:
-  - `VerifyAuthTokenMiddleware`: Validates token via Auth Service.
-  - `AuthServiceLogoutMiddleware`: Handles logout requests.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
----
+AUTH_SERVICE = 'http://localhost:8000'
+FIN_SERVICE = 'http://localhost:8002'
 
-## API Endpoints
-
-### **Master Data**
-
-#### 1. Company
-`GET /api/hr/master/company/` — List companies  
-**Query Parameters:**
-- `name`, `code`, `is_active`, `parent_name`, `children_name`, `max_depth`, `fields`, `exclude`, `parent_isnull`  
-**Example Response:**
-```json
-{
-  "count": 1,
-  "results": [
-    {
-      "id": 2,
-      "name": "Mazta Distribusi Indonesia",
-      "code": "MDI",
-      "is_active": true
+DATABASE_SERVICE = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'databases/auth.sqlite3',
+    },
+    'hr_master': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'databases/hr_master.sqlite3',
+    },
+    'hr_dump': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'databases/hr_dump.sqlite3',
     }
-  ]
 }
+
+DEBUG_ = True
 ```
 
-#### 2. Unit
-`GET /api/hr/master/unit/` — List units  
-Params similar to Company.
+### Key Configurable Options
 
-#### 3. Level
-`GET /api/hr/master/level/` — List job levels  
-Params similar to Unit.
-
-#### 4. Employment Type
-`GET /api/hr/master/employment-type/` — List employment types  
-**Params:** `name`, `code`, `is_active`, `fields`, `exclude`
-
-#### 5. Shift
-`GET /api/hr/master/shift/` — List shifts  
-**Params:** `name`, `code`, `start_day`, `end_day`, `is_active`, `fields`, `exclude`
-
-#### 6. Branch
-`GET /api/hr/master/branch/` — List branches  
-**Params:** `name`, `code`, `company_name`, `city`, `province`, `company_id`, `fields`, `exclude`
-
-#### 7. Employee
-`GET /api/hr/master/employee/` — List employees  
-**Params:**  
-Search: `full_name`, `province`, `city`, `religion`, `marital_status`, `birthplace`, `code`, `nik`, `unit_name`, `level_name`, etc.  
-Exact match: `company_id`, `branch_id`, `unit_id`, `level_id`, `employment_type_id`, `shift_id`, `user_id`  
-Boolean: `parent_isnull`
+| Setting        | Description                                        | Default                  |
+|----------------|----------------------------------------------------|--------------------------|
+| `AUTH_SERVICE` | URL of external authentication service             | `http://localhost:8000` |
+| `FIN_SERVICE`  | URL of external finance service                    | `http://localhost:8002` |
+| `DATABASES`    | Supports multiple databases (`default`, `hr_*`)    | SQLite local DBs         |
+| `DEBUG_`       | Toggle for debug mode                              | `True`                   |
+| `TIME_ZONE`    | Application timezone                               | `Asia/Jakarta`           |
 
 ---
 
-## API Documentation
-- **Schema (OpenAPI 3)**:  
+## 🚀 Usage
+
+### Authentication
+
+All requests must include a **token from the Auth Service**:
+
+```http
+Authorization: Token <your_token>
+```
+
+Custom middlewares validate tokens before granting access.
+
+### Database Access
+
+Queries are automatically routed to the correct HR database:  
+
+- `hr_master` → for primary HR data.  
+- `hr_dump` → for historical/dump HR data.  
+
+---
+
+## 📜 API Documentation
+
+The project uses **drf-spectacular** for schema generation.
+
+- OpenAPI schema available at:  
   ```
-  http://127.0.0.1:8000/api/schema/
+  /api/schema/
   ```
-- **ReDoc UI**:  
+- Swagger UI (if enabled):  
   ```
-  http://127.0.0.1:8000/api/docs/
+  /api/docs/
   ```
 
 ---
 
-## Troubleshooting
-- **Error: Couldn't import Django**  
-  Ensure your virtual environment is active and dependencies are installed.
-- **Auth Token errors**  
-  Check that `AUTH_SERVICE` URL in `local_settings.py` is correct and reachable.
+## 🗄 Database
+
+This service supports **multiple databases** using Django routers:
+
+- `default` → Authentication database.  
+- `hr_master` → Main HR database.  
+- `hr_dump` → Archived HR database.  
+
+You can easily switch to PostgreSQL, MySQL, or other backends by updating `local_settings.py`.
+
+---
+
+## 🛠 Troubleshooting
+
+- **Token Rejected:** Ensure Auth Service is running and issuing valid tokens.  
+- **Finance Integration Issues:** Confirm that `FIN_SERVICE` URL is correct.  
+- **Migrations Fail:** Verify SQLite database paths or credentials for other DBs.  
+- **API Docs Not Found:** Check that `drf-spectacular` is in `INSTALLED_APPS`.  
+
+---
+
+## 👥 Contributors
+
+- **Your Name** – Initial Work & Maintenance  
+- Contributions welcome via Pull Requests.  
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.
