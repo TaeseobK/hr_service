@@ -6,11 +6,21 @@ from .filters import *
 from hr.config import *
 from hr.thread_locals import *
 
-SOFTDELETE_PARAMS = [
-    OpenApiParameter("include_deleted", bool, OpenApiParameter.QUERY,
-                     description="Jika true, tampilkan semua data termasuk yang sudah soft delete."),
-    OpenApiParameter("only_deleted", bool, OpenApiParameter.QUERY,
-                     description="Jika true, tampilkan hanya data yang sudah soft delete."),
+import inspect
+
+BASE_PARAMS = [
+    OpenApiParameter("include_deleted", OpenApiTypes.BOOL, OpenApiParameter.QUERY,
+                     description="If true, get all data with deleted data."),
+    OpenApiParameter("only_deleted", OpenApiTypes.BOOL, OpenApiParameter.QUERY,
+                     description="If true, get all data only deleted data."),
+    OpenApiParameter("page", OpenApiTypes.INT, OpenApiParameter.QUERY,
+                     description="Return which page you want to return."),
+    OpenApiParameter("page_size", OpenApiTypes.INT, OpenApiParameter.QUERY,
+                     description="Return the count of data each page."),
+    OpenApiParameter("page_size", OpenApiTypes.STR, OpenApiParameter.QUERY,
+                     description="Return the count of data each page."),
+    OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY,
+                     description="Search based on name (WHERE LIKE %<value>%) and Code (WHERE = <value>)"),
 ]
 
 # ==============================
@@ -23,22 +33,15 @@ class CompanyViewSet(BaseViewSet):
     filterset_class = CompanyFilter
 
     @extend_schema(
-        summary="List Companies",
-        description="Ambil daftar perusahaan dengan pagination & filter.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar company dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("is_active", bool, OpenApiParameter.QUERY, description="True=aktif, False=soft deleted"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode perusahaan"),
-            OpenApiParameter("name", str, OpenApiParameter.QUERY, description="Nama perusahaan (partial match)"),
-            OpenApiParameter("parent_id", int, OpenApiParameter.QUERY, description="Filter berdasarkan parent ID"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Company, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: CompanySerializer}
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
 
 # ==============================
 # UNIT
@@ -50,15 +53,10 @@ class UnitViewSet(BaseViewSet):
     filterset_class = UnitFilter
 
     @extend_schema(
-        summary="List Units",
-        description="Ambil daftar unit dengan pagination & filter.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar unit dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode unit"),
-            OpenApiParameter("name", str, OpenApiParameter.QUERY, description="Nama unit (partial match)"),
-            OpenApiParameter("parent_id", int, OpenApiParameter.QUERY, description="Filter berdasarkan parent ID"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Unit, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: UnitSerializer}
     )
@@ -76,15 +74,10 @@ class LevelViewSet(BaseViewSet):
     filterset_class = LevelFilter
 
     @extend_schema(
-        summary="List Levels",
-        description="Ambil daftar level dengan pagination & filter.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar level dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode level"),
-            OpenApiParameter("name", str, OpenApiParameter.QUERY, description="Nama level (partial match)"),
-            OpenApiParameter("parent_id", int, OpenApiParameter.QUERY, description="Filter berdasarkan parent ID"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Level, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: LevelSerializer}
     )
@@ -102,14 +95,10 @@ class EmploymentTypeViewSet(BaseViewSet):
     filterset_class = EmploymentTypeFilter
 
     @extend_schema(
-        summary="List Employment Types",
-        description="Ambil daftar jenis employment (tetap, kontrak, dll).",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar employment_type dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode employment type"),
-            OpenApiParameter("name", str, OpenApiParameter.QUERY, description="Nama employment type"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(EmploymentType, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: EmploymentTypeSerializer}
     )
@@ -127,19 +116,10 @@ class ShiftViewSet(BaseViewSet):
     filterset_class = ShiftFilter
 
     @extend_schema(
-        summary="List Shifts",
-        description="Ambil daftar shift dengan pagination & filter berdasarkan hari/jam.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar shift dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode shift"),
-            OpenApiParameter("start_day", int, OpenApiParameter.QUERY, description="Hari mulai (0=Sunday, dst)"),
-            OpenApiParameter("end_day", int, OpenApiParameter.QUERY, description="Hari selesai"),
-            OpenApiParameter("start_time_gte", str, OpenApiParameter.QUERY, description="Mulai dari jam >= ... (HH:MM:SS)"),
-            OpenApiParameter("start_time_lte", str, OpenApiParameter.QUERY, description="Mulai sampai jam <= ... (HH:MM:SS)"),
-            OpenApiParameter("end_time_gte", str, OpenApiParameter.QUERY, description="Selesai dari jam >= ..."),
-            OpenApiParameter("end_time_lte", str, OpenApiParameter.QUERY, description="Selesai sampai jam <= ..."),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Shift, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: ShiftSerializer}
     )
@@ -157,16 +137,10 @@ class BranchViewSet(BaseViewSet):
     filterset_class = BranchFilter
 
     @extend_schema(
-        summary="List Branches",
-        description="Ambil daftar cabang perusahaan dengan filter kota, provinsi, kode pos.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar branch dengan pagination & filter.",
         parameters=[
-            OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
-            OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
-            OpenApiParameter("code", str, OpenApiParameter.QUERY, description="Kode cabang"),
-            OpenApiParameter("city", str, OpenApiParameter.QUERY, description="Nama kota"),
-            OpenApiParameter("province", str, OpenApiParameter.QUERY, description="Provinsi"),
-            OpenApiParameter("postal_code", str, OpenApiParameter.QUERY, description="Kode pos"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Branch, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: BranchSerializer}
     )
@@ -184,8 +158,7 @@ class EmployeeViewSet(BaseViewSet):
     filterset_class = EmployeeFilter
 
     @extend_schema(
-        summary="List Employees",
-        description="Ambil daftar karyawan dengan filter identitas, lokasi, atau status kerja.",
+        description=f"{inspect.getdoc(BaseViewSet)}\n\nAmbil daftar karyawan dengan filter identitas, lokasi, atau status kerja.",
         parameters=[
             OpenApiParameter("page", int, OpenApiParameter.QUERY, description="Halaman"),
             OpenApiParameter("page_size", int, OpenApiParameter.QUERY, description="Jumlah item per halaman"),
@@ -200,7 +173,8 @@ class EmployeeViewSet(BaseViewSet):
             OpenApiParameter("talenta_id", int, OpenApiParameter.QUERY, description="ID Talenta HR"),
             OpenApiParameter("hire_date", str, OpenApiParameter.QUERY, description="Tanggal masuk kerja (YYYY-MM-DD)"),
             OpenApiParameter("resign_date", str, OpenApiParameter.QUERY, description="Tanggal resign (YYYY-MM-DD)"),
-            *SOFTDELETE_PARAMS
+            *generate_filter_parameters_from_basefilter(Employee, BaseFilter),
+            *BASE_PARAMS
         ],
         responses={200: EmployeeSerializer}
     )

@@ -72,6 +72,7 @@ class EmploymentType(BaseModel) :
     def __str__(self):
         return self.name
     
+
 DAYS_OF_WEEK = [
     (0, 'SUNDAY'),
     (1, 'MONDAY'),
@@ -81,7 +82,6 @@ DAYS_OF_WEEK = [
     (5, 'FRIDAY'),
     (6, 'SATURDAY'),
 ]
-
 class Shift(BaseModel) :
     name = models.CharField(max_length=16, null=True, blank=True)
     code = models.CharField(max_length=24, unique=True)

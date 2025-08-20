@@ -2,7 +2,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
+from rest_framework.filters import SearchFilter
 
 from hr_dump.models import HRDump
 
@@ -10,6 +11,8 @@ from django.utils import timezone
 from django.db import models
 
 from django_filters.rest_framework import FilterSet, DjangoFilterBackend
+
+from drf_spectacular.types import OpenApiTypes
 
 from .thread_locals import get_current_user_id
 
@@ -140,12 +143,12 @@ class BaseFilter(FilterSet):
     created_by = django_filters.NumberFilter(field_name='created_by', lookup_expr='exact')
 
     created_at = django_filters.DateFilter(field_name='created_at', lookup_expr='exact')
-    created_at__gte = django_filters.DateFilter(field_name='created_at', lookup_expr='gte')
-    created_at__lte = django_filters.DateFilter(field_name='created_at', lookup_expr='lte')
+    created_at__gte = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
+    created_at__lte = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')
 
     deleted_at = django_filters.DateFilter(field_name='deleted_at', lookup_expr='exact')
-    deleted_at__gte = django_filters.DateFilter(field_name='deleted_at', lookup_expr='gte')
-    deleted_at__lte = django_filters.DateFilter(field_name='deleted_at', lookup_expr='lte')
+    deleted_at__gte = django_filters.DateTimeFilter(field_name='deleted_at', lookup_expr='gte')
+    deleted_at__lte = django_filters.DateTimeFilter(field_name='deleted_at', lookup_expr='lte')
 
     INCLUDE_SELF_CODE = True
 
@@ -204,32 +207,72 @@ class BaseFilter(FilterSet):
                 elif isinstance(field, (models.DateField, models.DateTimeField)):
                     cls.base_filters[field.name] = django_filters.DateFilter(field_name=field.name, lookup_expr='exact')
 
+def generate_filter_parameters_from_basefilter(model_class, base_filter_class=BaseFilter):
+    """
+    Generate OpenApiParameter list dari BaseFilter.init_dynamic().
+    """
+    # inisialisasi filter
+    base_filter_class.init_dynamic(model_class)
+    params = []
+
+    LOOKUP_LABELS = {
+        "exact": "exact match (=)",
+        "iexact": "case-insensitive exact match",
+        "contains": "contains",
+        "icontains": "case-insensitive contains",
+        "gte": "greater than or equal",
+        "lte": "less than or equal",
+        "in": "in list",
+    }
+
+    for name, flt in base_filter_class.base_filters.items():
+        # mapping sederhana django-filter ke tipe OpenAPI
+        if isinstance(flt, django_filters.BooleanFilter):
+            schema_type = bool
+        elif isinstance(flt, (django_filters.NumberFilter, NumberInFilter)):
+            schema_type = int
+        elif isinstance(flt, django_filters.DateFilter):
+            schema_type = OpenApiTypes.DATE
+        elif isinstance(flt, django_filters.CharFilter) or isinstance(flt, CharInFilter):
+            schema_type = str
+        elif isinstance(flt, django_filters.DateTimeFilter):
+            schema_type = OpenApiTypes.DATETIME
+        else:
+            schema_type = OpenApiTypes.STR
+
+        # kalau filter lookup-nya pakai "__in", kasih hint array
+        if "__in" in name:
+            schema_type = OpenApiTypes.INT
+
+        lookup_expr = getattr(flt, "lookup_expr", "iexact")
+
+        lookup_label = LOOKUP_LABELS.get(lookup_expr, lookup_expr)
+
+        params.append(
+            OpenApiParameter(
+                name,
+                schema_type,
+                OpenApiParameter.QUERY,
+                description=f"Filter by '{name}' (lookup: {lookup_label})"
+            )
+        )
+
+    return params
 
 # ==============================
 # BASE VIEWSET
 # ==============================
 class BaseViewSet(viewsets.ModelViewSet):
+    """
+    Standard BaseViewSet:
+    - Pagination (CustomPagination)
+    - Filter backend (DjangoFilterBackend, SearchFilter)
+    - Search: `name` (icontains), `code` (iexact)
+    - Softdelete support (include_deleted, only_deleted, restore)
+    - Audit trail (FinDump)
+    """
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend]
-
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                "include_deleted",
-                bool,
-                OpenApiParameter.QUERY,
-                description="Jika true, tampilkan semua data termasuk yang sudah soft delete."
-            ),
-            OpenApiParameter(
-                "only_deleted",
-                bool,
-                OpenApiParameter.QUERY,
-                description="Jika true, tampilkan hanya data yang sudah soft delete."
-            ),
-        ]
-    )
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+    filter_backends = [DjangoFilterBackend, SearchFilter]
 
     def get_queryset(self):
         qs = self.queryset

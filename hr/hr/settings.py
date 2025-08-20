@@ -51,21 +51,14 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "hr.config.custom_exception_handler",
 }
 
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'HR_SERVICE',
-    'DESCRIPTION': 'Documentation for consuming API from HR Databases',
+    'DESCRIPTION': f'Documentation for consuming API from HR Databases\n\nWARNING NOTES:\n\n{Path("keys/warning.md").read_text(encoding='utf-8')}',
     'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'SECURITY': [{'TokenAuth': []}],
-    'APPEND_COMPONENTS': {
-        'securitySchemes': {
-            'TokenAuth': {
-                'type': 'apiKey',
-                'in': 'header',
-                'name': 'Authorization',
-                'description': 'Token dari Auth Service. Format: Token <token>'
-            }
-        },
+    'SERVE_INCLUDE_SCHEMA': True,
+    "ENUM_NAME_OVERRIDES": {
+        "hr.hr_master.models.DAYS_OF_WEEK": "DaysOfWeekEnum",
     },
 }
 
