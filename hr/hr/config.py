@@ -1,4 +1,5 @@
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets, status
@@ -21,7 +22,7 @@ TELEGRAM_TOKEN = "8107036456:AAFmc5wbkbqYI5xkGGm3RDVM6J7HhbiQgDw"
 CHAT_ID = 8303553610
 
 class CustomPagination(PageNumberPagination) :
-    page_size = 5
+    page_size = 10
     page_size_query_param = 'page_size'
 
     def get_paginated_response(self, data):
@@ -98,6 +99,7 @@ class BaseModel(models.Model):
         if not self.pk:  # object baru
             if self.created_by is None:
                 self.created_by = user_id
+                self.updated_by = user_id
         else:  # update object lama
             self.updated_by = user_id
 
@@ -305,3 +307,27 @@ class BaseViewSet(viewsets.ModelViewSet):
                 {"detail": f"{self.queryset.model.__name__} tidak ditemukan"},
                 status=404,
             )
+
+def custom_exception_handler(exc, context):
+    response = exception_handler(exc, context)
+
+    if response is not None:
+        data = response.data
+
+        # Kalau dict field errors, gabung semua ke string
+        if isinstance(data, dict) and "detail" not in data:
+            messages = []
+            for field, errors in data.items():
+                # errors bisa list atau string
+                if isinstance(errors, (list, tuple)):
+                    for err in errors:
+                        messages.append(f"{field}: {err}")
+                else:
+                    messages.append(f"{field}: {errors}")
+            response.data = {"detail": " | ".join(messages)}
+
+        else:
+            # untuk global error (sudah ada detail)
+            response.data = {"detail": data.get("detail", data)}
+
+    return response

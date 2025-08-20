@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "EXCEPTION_HANDLER": "hr.config.custom_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -76,7 +77,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'hr.auth_middleware.VerifyAuthTokenMiddleware',
+    'hr.auth_middleware.VerifyAuthMiddleware',
     'hr.auth_middleware.AuthServiceLogoutMiddleware',
 ]
 

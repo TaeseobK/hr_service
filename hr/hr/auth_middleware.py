@@ -1,58 +1,64 @@
 from django.contrib.auth import get_user_model
 from .local_settings import AUTH_SERVICE
 from django.shortcuts import redirect
-import threading
-import requests
+import requests, jwt, threading
 from .thread_locals import *
 from django.http import JsonResponse
+from django.utils.deprecation import MiddlewareMixin
 
 # Thread-local storage untuk simpan user_id
 _thread_locals = threading.local()
+PUBLIC_KEY = open("keys/public.pem").read()
 
-class VerifyAuthTokenMiddleware:
-    """
-    Middleware global untuk:
-    - Verifikasi token dari AUTH_SERVICE
-    - Simpan user_id di threadlocal
-    """
-    def __init__(self, get_response):
-        self.get_response = get_response
+class VerifyAuthMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        if request.path.startswith(("/api/docs", "/api/schema", "/admin")):
+            return None
 
-    def __call__(self, request):
-        # Default: user belum login
-        _thread_locals.user_id = None
-        set_current_user_id(None)  
-
-        # Lewatkan path yang nggak butuh autentikasi
-        if request.path.startswith(("/api/docs/", "/api/schema/", "/admin/")):
-            return self.get_response(request)
-
-        # Ambil token dari header
         auth_header = request.headers.get("Authorization", "")
+        sessionid = request.COOKIES.get("sessionid")
 
-        if not auth_header.startswith("Token "):
-            return JsonResponse({'detail': "Token doesn't match. Please check your token or contact support if needed."}, status=401)
+        # fallback parse dari header Cookie kalau gagal
+        if not sessionid:
+            raw_cookie = request.headers.get("Cookie", "")
+            for part in raw_cookie.split(";"):
+                if part.strip().startswith("sessionid="):
+                    sessionid = part.strip().split("=", 1)[1]
 
-        token = auth_header.split(" ", 1)[1]
+        # Case 1: Frontend request pakai sessionid
+        if sessionid:
+            try:
+                resp = requests.post(
+                    f"{AUTH_SERVICE}/api/auth/verify-session/",
+                    cookies={"sessionid": sessionid},
+                    timeout=5
+                )
+                if resp.status_code != 200:
+                    return JsonResponse({"detail": "Invalid session"}, status=401)
 
-        # Verifikasi token ke AUTH_SERVICE
-        try:
-            resp = requests.post(
-                f"{AUTH_SERVICE}/api/auth/verify-token/",
-                headers={"Authorization": f"Token {token}"},
-                timeout=5
-            )
-            if resp.status_code != 200:
-                return JsonResponse({"detail": "Invalid token"}, status=401)
-            
-            if resp.status_code == 200:
                 data = resp.json()
-                _thread_locals.user_id = data.get("user_id")
-                set_current_user_id(data.get('user_id'))
-        except requests.RequestException:
-            return JsonResponse({"detail": "Cannot reach AUTH_SERVICE"}, status=503)
+                request.user_id = data.get("user_id")
+                request.internal_token = data.get("internal_token")
+                set_current_user_id(request.user_id)
+                
+                return None
 
-        return self.get_response(request)
+            except requests.RequestException:
+                return JsonResponse({"detail": "Cannot reach AUTH"}, status=503)
+
+        # Case 2: Service → Service pakai Bearer token
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1]
+            try:
+                payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+                request.user_id = payload.get("user_id")
+                return None
+            except jwt.ExpiredSignatureError:
+                return JsonResponse({"detail": "Internal token expired"}, status=401)
+            except jwt.InvalidTokenError:
+                return JsonResponse({"detail": "Invalid internal token"}, status=401)
+
+        return JsonResponse({"detail": "Missing Authorization or sessionid"}, status=401)
 
 User = get_user_model()
 
