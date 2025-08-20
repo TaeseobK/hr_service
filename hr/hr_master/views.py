@@ -21,6 +21,10 @@ BASE_PARAMS = [
                      description="Return the count of data each page."),
     OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY,
                      description="Search based on name (WHERE LIKE %<value>%) and Code (WHERE = <value>)"),
+    OpenApiParameter("fields", OpenApiTypes.STR, OpenApiParameter.QUERY,
+                     description="Only get the fields you want\n\nexample:\n\n?fields=name,code,created_at"),
+    OpenApiParameter("exclude", OpenApiTypes.STR, OpenApiParameter.QUERY,
+                     description="Remove the fields you want\n\nexample:\n\n?exclude=created_at,created_by,updated_at,updated_by"),
 ]
 
 # ==============================
