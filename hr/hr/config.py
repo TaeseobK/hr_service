@@ -22,9 +22,6 @@ import math
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-TELEGRAM_TOKEN = "8107036456:AAFmc5wbkbqYI5xkGGm3RDVM6J7HhbiQgDw"
-CHAT_ID = 8303553610
-
 dump_data = 'hr_dump'
 model_dump = HRDump
 
