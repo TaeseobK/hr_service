@@ -5,10 +5,11 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, status, serializers
 from rest_framework.filters import SearchFilter
 
-from hr_dump.models import HRDump
+from hr_dump.models import *
 
 from django.utils import timezone
 from django.db import models
+from django.db.models import Q
 
 from django_filters.rest_framework import FilterSet, DjangoFilterBackend
 
@@ -23,6 +24,9 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 TELEGRAM_TOKEN = "8107036456:AAFmc5wbkbqYI5xkGGm3RDVM6J7HhbiQgDw"
 CHAT_ID = 8303553610
+
+dump_data = 'hr_dump'
+model_dump = HRDump
 
 class CustomPagination(PageNumberPagination) :
     page_size = 10
@@ -259,6 +263,24 @@ def generate_filter_parameters_from_basefilter(model_class, base_filter_class=Ba
 
     return params
 
+class NameCodeSearchFilter(SearchFilter):
+    def filter_queryset(self, request, queryset, view):
+        search_value = request.query_params.get(self.search_param, '')
+
+        if not search_value:
+            return queryset
+
+        q = Q()
+        # kalau field name ada di model, pakai icontains
+        if hasattr(queryset.model, "name"):
+            q |= Q(name__icontains=search_value)
+
+        # kalau field code ada di model, pakai iexact
+        if hasattr(queryset.model, "code"):
+            q |= Q(code__iexact=search_value)
+
+        return queryset.filter(q)
+
 # ==============================
 # BASE VIEWSET
 # ==============================
@@ -269,10 +291,10 @@ class BaseViewSet(viewsets.ModelViewSet):
     - Filter backend (DjangoFilterBackend, SearchFilter)
     - Search: `name` (icontains), `code` (iexact)
     - Softdelete support (include_deleted, only_deleted, restore)
-    - Audit trail (FinDump)
+    - Audit trail (model_dump)
     """
     pagination_class = CustomPagination
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend, NameCodeSearchFilter]
 
     def get_queryset(self):
         qs = self.queryset
@@ -286,69 +308,146 @@ class BaseViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        instance = serializer.save()
         user_id = get_current_user_id()
+        dump_obj = None
+        try:
 
-        HRDump.objects.using('hr_dump').create(
-            user_id=user_id,
-            path=self.request.path,
-            method=self.request.method,
-            payload=self.get_serializer(instance).data
-        )
+            dump_obj = model_dump.objects.using(dump_data).create(
+                user_id=user_id,
+                path=self.request.path,
+                method=self.request.method,
+                payload=serializer.validated_data
+            )
+            dump_obj.save()
+        except Exception as e:
+            return Response(
+                {
+                    "detail": f"Failed to insert dump_data: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            instance = serializer.save()
+            return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            if dump_obj:
+                dump_obj.delete()
+            return Response(
+                {
+                    'detail': f"Failed to insert main_data: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+
 
     def perform_update(self, serializer):
+        user_id = get_current_user_id()
         instance = self.get_object()
         old_data = self.get_serializer(instance).data
-        updated_instance = serializer.save()
-        new_data = self.get_serializer(updated_instance).data
+        dump_obj = None
 
-        user_id = get_current_user_id()
-        HRDump.objects.using('hr_dump').create(
-            user_id=user_id,
-            path=self.request.path,
-            method=self.request.method,
-            payload={
-                "before": old_data,
-                "after": new_data
-            }
-        )
+        try:
+            dump_obj = model_dump.objects.using(dump_data).create(
+                user_id=user_id,
+                path=self.request.path,
+                method=self.request.method,
+                payload={
+                    "before": old_data,
+                    "after": serializer.validated_data
+                }
+            )
+            dump_obj.save()
+        except Exception as e:
+            return Response(
+                {
+                    "detail": f"Failed to insert dump_data: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            updated_instance = serializer.save()
+            return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
+        except Exception as e:
+            if dump_obj:
+                dump_obj.delete()
+            return Response(
+                {
+                    'detail': f'Failed update main_data: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        snapshot = self.get_serializer(instance).data
         user_id = get_current_user_id()
-        
-        HRDump.objects.using('hr_dump').create(
-            user_id=user_id,
-            path=self.request.path,
-            method="DELETE",
-            payload={
-                "deleted": snapshot
-            }
-        )
+        instance = self.get_object()
+        dump_obj = None
 
-        instance.delete(user_id=user_id)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:        
+            dump_obj = model_dump.objects.using(dump_data).create(
+                user_id=user_id,
+                path=self.request.path,
+                method="DELETE",
+                payload={
+                    "deleted": self.get_serializer.data
+                }
+            )
+            dump_obj.save()
+        except Exception as e:
+            return Response(
+                {
+                    'detail': f"Failed insert dump_data: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            instance.delete(user_id=user_id)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            if dump_obj:
+                dump_obj.delete()
+            return Response(
+                {
+                    'detail': f'Failed to delete main_data: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=True, methods=["post"], url_path="restore")
     def restore(self, request, pk=None):
+        user_id = get_current_user_id()
+        dump_obj = None
+
         try:
             obj = self.queryset.model.all_objects.get(pk=pk)
-            user_id = get_current_user_id()
-
-            HRDump.objects.using('hr_dump').create(
+        except self.queryset.model.DoesNotExist:
+            return Response(
+                {"detail": f"{self.queryset.model.__name__} not found."},
+                status=404,
+            )
+        
+        try:
+            dump_obj = model_dump.objects.using(dump_data).create(
                 user_id=user_id,
                 path=self.request.path,
                 method="RESTORE",
                 payload=self.serializer_class(obj).data
             )
-
-            obj.restore(user_id=user_id)
-            return Response(self.serializer_class(obj).data)
-        except self.queryset.model.DoesNotExist:
+            dump_obj.save()
+        except Exception as e:
             return Response(
-                {"detail": f"{self.queryset.model.__name__} tidak ditemukan"},
-                status=404,
+                {
+                    'detail': f'Failed to insert dump_data: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            obj.restore(user_id=user_id)
+            return Response(self.serializer_class(obj).data, status=status.HTTP_200_OK)
+        except Exception as e:
+            if dump_obj:
+                dump_obj.delete()
+            return Response(
+                {
+                    'detail': f'Failed to restore main_data: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST
             )
 
 def custom_exception_handler(exc, context):
