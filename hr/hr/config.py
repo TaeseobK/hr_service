@@ -307,70 +307,66 @@ class BaseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user_id = get_current_user_id()
         dump_obj = None
-        try:
+        instance = None
 
+        try:
+            # simpan ke main DB dulu
+            instance = serializer.save()
+            full_payload = self.get_serializer(instance).data
+
+            # baru simpan dump pake full data
             dump_obj = model_dump.objects.using(dump_data).create(
                 user_id=user_id,
                 path=self.request.path,
                 method=self.request.method,
-                payload=serializer.validated_data
+                payload=full_payload,
             )
             dump_obj.save()
+
+            return Response(full_payload, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            return Response(
-                {
-                    "detail": f"Failed to insert dump_data: {str(e)}"
-                }, status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            instance = serializer.save()
-            return Response(self.get_serializer(instance).data, status=status.HTTP_201_CREATED)
-        
-        except Exception as e:
+            if instance:  # rollback main jika gagal dump
+                instance.delete()
             if dump_obj:
                 dump_obj.delete()
             return Response(
-                {
-                    'detail': f"Failed to insert main_data: {str(e)}"
-                }, status=status.HTTP_400_BAD_REQUEST
+                {"detail": f"Failed on create: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
             )
-
 
     def perform_update(self, serializer):
         user_id = get_current_user_id()
         instance = self.get_object()
         old_data = self.get_serializer(instance).data
         dump_obj = None
+        updated_instance = None
 
         try:
+            updated_instance = serializer.save()
+            full_payload = self.get_serializer(updated_instance).data
+
             dump_obj = model_dump.objects.using(dump_data).create(
                 user_id=user_id,
                 path=self.request.path,
                 method=self.request.method,
                 payload={
                     "before": old_data,
-                    "after": serializer.validated_data
-                }
+                    "after": full_payload
+                },
             )
             dump_obj.save()
+
+            return Response(full_payload, status=status.HTTP_200_OK)
+
         except Exception as e:
-            return Response(
-                {
-                    "detail": f"Failed to insert dump_data: {str(e)}"
-                }, status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            updated_instance = serializer.save()
-            return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
-        except Exception as e:
+            if updated_instance:
+                updated_instance.delete()
             if dump_obj:
                 dump_obj.delete()
             return Response(
-                {
-                    'detail': f'Failed update main_data: {str(e)}'
-                }, status=status.HTTP_400_BAD_REQUEST
+                {'detail': f'Failed update: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     def destroy(self, request, *args, **kwargs):
@@ -378,33 +374,26 @@ class BaseViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         dump_obj = None
 
-        try:        
+        try:
+            full_data = self.get_serializer(instance).data
+
             dump_obj = model_dump.objects.using(dump_data).create(
                 user_id=user_id,
                 path=self.request.path,
                 method="DELETE",
-                payload={
-                    "deleted": self.get_serializer.data
-                }
+                payload={"deleted": full_data},
             )
             dump_obj.save()
-        except Exception as e:
-            return Response(
-                {
-                    'detail': f"Failed insert dump_data: {str(e)}"
-                }, status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
+
             instance.delete(user_id=user_id)
             return Response(status=status.HTTP_204_NO_CONTENT)
+
         except Exception as e:
             if dump_obj:
                 dump_obj.delete()
             return Response(
-                {
-                    'detail': f'Failed to delete main_data: {str(e)}'
-                }, status=status.HTTP_400_BAD_REQUEST
+                {'detail': f'Failed delete: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(detail=True, methods=["post"], url_path="restore")
@@ -419,32 +408,27 @@ class BaseViewSet(viewsets.ModelViewSet):
                 {"detail": f"{self.queryset.model.__name__} not found."},
                 status=404,
             )
-        
+
         try:
+            full_data = self.serializer_class(obj).data
+
             dump_obj = model_dump.objects.using(dump_data).create(
                 user_id=user_id,
                 path=self.request.path,
                 method="RESTORE",
-                payload=self.serializer_class(obj).data
+                payload=full_data,
             )
             dump_obj.save()
-        except Exception as e:
-            return Response(
-                {
-                    'detail': f'Failed to insert dump_data: {str(e)}'
-                }, status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
+
             obj.restore(user_id=user_id)
             return Response(self.serializer_class(obj).data, status=status.HTTP_200_OK)
+
         except Exception as e:
             if dump_obj:
                 dump_obj.delete()
             return Response(
-                {
-                    'detail': f'Failed to restore main_data: {str(e)}'
-                }, status=status.HTTP_400_BAD_REQUEST
+                {'detail': f'Failed restore: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
 def custom_exception_handler(exc, context):
