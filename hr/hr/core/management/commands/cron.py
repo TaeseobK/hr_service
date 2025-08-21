@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"[scheduler] Running {now.isoformat()}")
 
-        if day == now.day and hour == now.hour and minute <= now.minute:
+        if day == 1 and hour == 0 and minute <= 30:
             self.stdout.write("[scheduler] Running dump data()...")
             HRDump.run_dump()
         
