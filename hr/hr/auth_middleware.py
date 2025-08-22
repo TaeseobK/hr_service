@@ -5,10 +5,12 @@ import requests, jwt, threading
 from .thread_locals import *
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
+from .local_settings import BASE_DIR
+from pathlib import Path
 
 # Thread-local storage untuk simpan user_id
 _thread_locals = threading.local()
-PUBLIC_KEY = open("keys/public.pem").read()
+PUBLIC_KEY = Path(BASE_DIR, 'keys/public.pem').read()
 
 class VerifyAuthMiddleware(MiddlewareMixin):
     def process_request(self, request):

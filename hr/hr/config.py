@@ -323,7 +323,10 @@ class BaseViewSet(viewsets.ModelViewSet):
             )
             dump_obj.save()
 
-            return Response(full_payload, status=status.HTTP_201_CREATED)
+            return Response({
+                'detail': 'Successfully created data.',
+                'data': full_payload
+            }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             if instance:  # rollback main jika gagal dump
@@ -357,7 +360,13 @@ class BaseViewSet(viewsets.ModelViewSet):
             )
             dump_obj.save()
 
-            return Response(full_payload, status=status.HTTP_200_OK)
+            return Response({
+                'detail': f'Successfully updated data',
+                'data': {
+                    'before': old_data,
+                    'after': full_payload
+                }
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             if updated_instance:
@@ -386,7 +395,10 @@ class BaseViewSet(viewsets.ModelViewSet):
             dump_obj.save()
 
             instance.delete(user_id=user_id)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({
+                'detail': 'Successfully deleted data.',
+                'data': full_data
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             if dump_obj:
@@ -421,7 +433,10 @@ class BaseViewSet(viewsets.ModelViewSet):
             dump_obj.save()
 
             obj.restore(user_id=user_id)
-            return Response(self.serializer_class(obj).data, status=status.HTTP_200_OK)
+            return Response({
+                'detail': 'Successfully restoring data.',
+                'data': self.serializer_class(obj).data
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             if dump_obj:
