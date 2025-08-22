@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Thread-local storage untuk simpan user_id
 _thread_locals = threading.local()
-PUBLIC_KEY = Path(BASE_DIR, 'keys/public.pem').read()
+PUBLIC_KEY = Path(BASE_DIR, 'keys/public.pem').read_text()
 
 class VerifyAuthMiddleware(MiddlewareMixin):
     def process_request(self, request):
