@@ -14,7 +14,7 @@ PUBLIC_KEY = Path(BASE_DIR, 'keys/public.pem').read_text()
 
 class VerifyAuthMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        if request.path.startswith(("/api/docs", "/api/schema", "/admin")):
+        if request.path.startswith(("/api/docs", "/api/schema", "/admin", "/static")):
             return None
 
         auth_header = request.headers.get("Authorization", "")
