@@ -13,11 +13,20 @@ from django.db.models import Q
 
 from django_filters.rest_framework import FilterSet, DjangoFilterBackend
 
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    OpenApiExample,
+    inline_serializer,
+)
 from drf_spectacular.types import OpenApiTypes
 
 from .thread_locals import get_current_user_id
 
 import django_filters
+import pandas as pd
 import math
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -445,6 +454,57 @@ class BaseViewSet(viewsets.ModelViewSet):
                 {'detail': f'Failed restore: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+    @extend_schema(
+    request=inline_serializer(
+        name="BulkUploadRequest",
+        fields={
+            "file": serializers.FileField(),
+        },
+    ), responses={
+            201: OpenApiResponse(OpenApiTypes.OBJECT),
+            400: OpenApiResponse(OpenApiTypes.OBJECT),
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="insert-bulk")
+    def insert_bulk(self, request):
+        """
+        Upload Excel (xlsx/csv) untuk bulk insert.
+        - Auto isi created_by & updated_by dari request.user.id
+        - Rollback kalau ada yang gagal
+        """
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"detail": "File not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # load pakai pandas
+            if file_obj.name.endswith(".csv"):
+                df = pd.read_csv(file_obj)
+            else:
+                df = pd.read_excel(file_obj)
+
+            data = df.to_dict(orient="records")
+            user_id = get_current_user_id()
+
+            # isi otomatis kolom audit
+            for row in data:
+                row["created_by"] = user_id
+                row["updated_by"] = user_id
+
+            serializer = self.get_serializer(data=data, many=True)
+
+            with transaction.atomic():
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user_id=user_id)  # dikirim ke BaseModel.save()
+
+            return Response(
+                {"detail": f"Successfully inserted {len(data)} rows"},
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            return Response({"detail": f"Bulk insert failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)

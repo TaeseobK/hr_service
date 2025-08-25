@@ -33,7 +33,7 @@ class VerifyAuthMiddleware(MiddlewareMixin):
                 resp = requests.post(
                     f"{AUTH_SERVICE}/api/auth/verify-session/",
                     cookies={"sessionid": sessionid},
-                    timeout=5
+                    timeout=10
                 )
                 if resp.status_code != 200:
                     return JsonResponse({"detail": "Invalid session"}, status=401)
