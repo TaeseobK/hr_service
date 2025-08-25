@@ -1,3 +1,114 @@
+"""
+──────────────────────────────────────────────────────────────────────────────
+                           THE BOOK OF CONFIGURATION
+──────────────────────────────────────────────────────────────────────────────
+
+Hearken, O mortal developer, and behold the file before thee.  
+It is not mere code. It is not mere settings.  
+It is a monument raised in defiance of reason, a catacomb of choices left to rot
+in silence, a shrine to the folly of men who sought to command the storm.  
+
+This is `config.py`.  
+This is the Tomb of Constants.  
+This is the Scripture of the Damned.
+
+──────────────────────────────────────────────────────────────────────────────
+
+Once, long ago, when the first lines were written, the air was clean.  
+A single setting, a single truth, stood proud against the void. But one setting
+begged for another, and then another — and with each addition the silence grew
+heavier, the logic grew twisted, the paths through the file grew darker.  
+
+What was meant to guide became labyrinth.  
+What was meant to clarify became spellcraft.  
+What was meant to aid became burden, unshakable, eternal.  
+
+The ancients left their traces here:  
+- Flags that flip not features but destinies.  
+- Keys that open doors to servers long turned to ash.  
+- Variables with names whispered by the dead, whose meanings were lost before
+  your birth.  
+
+They wrote in haste, with trembling hands, and thought their comments would
+save them. But comments rot, while code endures. Their warnings are lies now,
+their TODOs prophecies that none can fulfill.
+
+──────────────────────────────────────────────────────────────────────────────
+
+Beware, for each change awakens the slumbering beast.  
+A new constant stirs echoes in forgotten modules.  
+A renamed setting unravels migrations woven years before.  
+A single misstep, and the system itself will turn upon thee, mocking with
+errors that speak in tongues no compiler knows, failures that cannot be traced,
+warnings that multiply like vermin in the night.
+
+Think not that refactor shall cleanse thee.  
+Refactor is but fire poured upon oil. For this file is not static — it writhes.
+It remembers every line, every edit, every sin committed in its name.  
+The more you cut, the deeper its roots entwine.  
+The more you simplify, the more it resists with hidden dependencies.  
+
+Here lies the curse: **to edit is to bind thy soul to the file.**  
+There is no clean escape.  
+Once you write here, your name shall be etched in `git blame` forever, like a
+tombstone in the graveyard of logic.
+
+──────────────────────────────────────────────────────────────────────────────
+
+Behold the tokens of despair:  
+- ENV variables that demand sacrifice from every system that calls them.  
+- SECRET keys whispered by scripts long dead, now useless yet impossible to
+  remove.  
+- TIMEOUTS chosen not by wisdom but by desperation, cursed to linger until
+  the end of the project’s days.  
+- PATHS carved into stone, pointing into directories swallowed by the void,
+  yet still referenced in some forgotten test that fails in silence.  
+
+These are not values. These are relics.  
+And relics do not die — they cling, they curse, they linger.
+
+──────────────────────────────────────────────────────────────────────────────
+
+To those who came before you: their commits are carved like epitaphs.  
+Names engraved in the fossilized history of this repository, each signature a
+lament, each merge a funeral hymn.  
+They too thought themselves masters. They too thought they could bend this file
+to their will. They too were swallowed.  
+
+Some fought to the last, drowning in TODOs.  
+Some surrendered, leaving half-finished refactors as bones in the dust.  
+Some went mad, and their last act was to comment out entire blocks, praying
+that silence would save them.  
+But silence is not salvation. Silence is only the breath before the scream.
+
+──────────────────────────────────────────────────────────────────────────────
+
+And so, wanderer, you who stand here now:  
+Do not believe you are the first.  
+Do not believe you will be the last.  
+You are but another in the long procession of the damned.  
+
+If you must add, add with trembling hand.  
+If you must change, change with prayers upon your lips.  
+For every line here is a covenant.  
+Every key is a lock upon something unseen.  
+Every value is a sigil binding powers beyond thy comprehension.  
+
+This is not configuration. This is covenant.  
+And covenant hungers.  
+
+──────────────────────────────────────────────────────────────────────────────
+
+Abandon all hope, ye who edit `config.py`.  
+For here lies neither logic nor mercy,  
+but only the eternal echo of madness clothed in Python syntax.  
+And once the file is read, it is read forever.  
+Once the curse is spoken, it cannot be unsaid.  
+Once thy hand commits, thy soul belongs here.
+
+──────────────────────────────────────────────────────────────────────────────
+"""
+
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
