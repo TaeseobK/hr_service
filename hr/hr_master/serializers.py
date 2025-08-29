@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import *
 
 """
@@ -21,10 +22,32 @@ May God of Knowledge Bless You.
 
 """
 
+class UserField(serializers.Field):
+    """
+    Custom field buat ganti integer user_id jadi dict user data.
+    Ambil dari context['users_map'].
+    """
+    def to_representation(self, value):
+        users_map = self.context.get("users_map", {})
+        data = users_map.get(value, {"id": value}) if value else None
+        return data
+    
+UserField = extend_schema_field(
+    {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer"},
+            "username": {"type": "string"},
+            "email": {"type": "string"}
+        }
+    }
+)(UserField)
+
 class DynamicModelSerializer(serializers.ModelSerializer):
     """
     Bisa filter 'fields' dan 'exclude' (diambil dari kwargs atau query_params).
     """
+    
     def __init__(self, *args, **kwargs):
         # Ambil context request
         context = kwargs.get('context', {})
@@ -55,7 +78,16 @@ class DynamicModelSerializer(serializers.ModelSerializer):
         if exclude is not None:
             for field_name in exclude:
                 self.fields.pop(field_name, None)
+    
+    def get_fields(self):
+        fields = super().get_fields()
 
+        # ganti semua *_by jadi UserField
+        for by_field in ["created_by", "updated_by", "deleted_by"]:
+            if by_field in fields:
+                fields[by_field] = UserField()
+
+        return fields
 
 class BaseTreeSerializer(DynamicModelSerializer):
     """

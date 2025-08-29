@@ -121,6 +121,7 @@ from hr_dump.models import *
 from django.utils import timezone
 from django.db import models
 from django.db.models import Q
+from django.core.cache import cache
 
 from django_filters.rest_framework import FilterSet, DjangoFilterBackend
 
@@ -135,10 +136,12 @@ from drf_spectacular.utils import (
 from drf_spectacular.types import OpenApiTypes
 
 from .thread_locals import get_current_user_id
+from .local_settings import AUTH_SERVICE
 
 import django_filters
 import pandas as pd
 import math
+import requests
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
@@ -412,6 +415,70 @@ class BaseViewSet(viewsets.ModelViewSet):
     """
     pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, NameCodeSearchFilter]
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        request = self.request
+
+        # Ambil queryset ringan hanya field *_by
+        queryset = self.filter_queryset(self.get_queryset())
+        model = queryset.model
+
+        # cari field *_by yg ada di model
+        by_fields = [
+            f for f in ["created_by", "updated_by", "deleted_by"]
+            if f in [x.name for x in model._meta.fields]
+        ]
+
+        user_ids = set()
+        if by_fields:
+            values = queryset.values_list(*by_fields, flat=False)
+            for row in values:
+                for val in row:
+                    if val:
+                        user_ids.add(val)
+
+        users_map = {}
+        if user_ids:
+            missing_ids = []
+            for uid in user_ids:
+                cached = cache.get(f"user:{uid}")
+                if cached:
+                    users_map[uid] = cached
+                else:
+                    missing_ids.append(uid)
+
+            if missing_ids:
+                try:
+                    resp = requests.get(
+                        f"{AUTH_SERVICE}/api/users/",
+                        params={
+                            "id__in": ",".join(map(str, missing_ids)),
+                            "exclude": "groups,user_permissions,last_login,date_joined"
+                        },
+                        headers={"Authorization": f"Bearer {getattr(request, 'internal_token', '')}"},
+                        timeout=5
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+
+                    # kalau hasilnya array langsung
+                    if isinstance(data, list):
+                        data_list = data
+                    else:
+                        data_list = data.get("results", [])
+
+                    for u in data_list:
+                        users_map[u["id"]] = u
+                        cache.set(f"user:{u['id']}", u, 60)  # cache dict lengkap
+
+                except Exception as e:
+                    # fallback jangan cache minimal
+                    for uid in missing_ids:
+                        users_map[uid] = {"id": uid}
+
+        context["users_map"] = users_map
+        return context
 
     def get_queryset(self):
         qs = self.queryset
@@ -640,3 +707,34 @@ def custom_exception_handler(exc, context):
             response.data = {"detail": data.get("detail", data)}
 
     return response
+
+def get_users_from_auth(user_ids, timeout=300):
+    """
+    Ambil detail user dari Auth Service sekali saja.
+    Cache hasilnya biar ga bolak-balik hit Auth.
+    """
+    users_map = {}
+    missing_ids = []
+
+    # cek cache dulu
+    for uid in user_ids:
+        cached = cache.get(f"user:{uid}")
+        if cached:
+            users_map[uid] = cached
+        else:
+            missing_ids.append(uid)
+
+    # kalau ada yang belum di-cache, fetch dari Auth Service
+    if missing_ids:
+        try:
+            resp = requests.get(f"{AUTH_SERVICE}/api/users/?id__in={','.join(map(str, missing_ids))}", timeout=5)
+            if resp.status_code == 200:
+                for u in resp.json():
+                    users_map[u["id"]] = u
+                    cache.set(f"user:{u['id']}", u, timeout=timeout)
+        except requests.RequestException:
+            # fallback: return id only kalau Auth error
+            for uid in missing_ids:
+                users_map[uid] = {"id": uid}
+
+    return users_map
