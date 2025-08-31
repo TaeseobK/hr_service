@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'drf_spectacular_sidecar',
+    'drf_spectacular_extras',
     'drf_spectacular',
     'rest_framework',
     'django_filters',
@@ -61,6 +61,27 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "hr.hr_master.models.DAYS_OF_WEEK": "DaysOfWeekEnum",
     },
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+        'theme': 'green',
+        'docExpansion': 'none',
+        'showExtensions': True,
+        'displayRequestDuration': True,
+    }
+}
+
+SPECTACULAR_EXTRAS_SETTINGS = {
+    'SCALAR_UI_SETTINGS': {
+        'theme': 'deepSpace',
+        'layout': 'modern',
+        'showSidebar': True,
+        'hideDownloadButton': False,
+        'searchHotKey': 'k',
+    },
 }
 
 MIDDLEWARE = [
@@ -71,8 +92,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'hr.auth_middleware.VerifyAuthMiddleware',
-    'hr.auth_middleware.AuthServiceLogoutMiddleware',
+    'hr.middleware.VerifyAuthMiddleware',
+    'hr.middleware.AuthServiceLogoutMiddleware',
+    'hr.middleware.PrometheusMiddleware',
 ]
 
 API_SERVICE_URL = AUTH_SERVICE
@@ -80,7 +102,7 @@ API_SERVICE_URL = AUTH_SERVICE
 ROOT_URLCONF = 'hr.urls'
 
 AUTHENTICATION_BACKENDS = [
-    'hr.auth_middleware.AuthServiceBackend',
+    'hr.middleware.AuthServiceBackend',
     "django.contrib.auth.backends.ModelBackend",
 ]
 
@@ -155,3 +177,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CSRF_TRUSTED_ORIGINS = CSRF_SERVICE
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
+        }
+    }
+}

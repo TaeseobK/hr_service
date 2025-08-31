@@ -235,7 +235,7 @@ class EmployeeSerializer(BaseTreeSerializer) :
     shift = ShiftSerializer(read_only=True)
     employment_type = EmploymentTypeSerializer(read_only=True)
 
-    company = CompanySerializer(read_only=True)
+    company = CompanySerializer(many=True, read_only=True)
 
     class Meta:
         model = Employee

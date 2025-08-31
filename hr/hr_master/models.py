@@ -22,6 +22,7 @@ class Company(BaseModel) :
         indexes = [
             models.Index(fields=['parent'])
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return self.name
@@ -39,6 +40,7 @@ class Unit(BaseModel) :
         indexes = [
             models.Index(fields=['parent'])
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return self.name
@@ -56,6 +58,7 @@ class Level(BaseModel) :
         indexes = [
             models.Index(fields=['parent'])
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return self.name
@@ -68,6 +71,7 @@ class EmploymentType(BaseModel) :
         db_table = 'employment_types'
         managed = True
         verbose_name_plural = 'EmploymentTypes'
+        ordering = ['-id']
     
     def __str__(self):
         return self.name
@@ -100,6 +104,7 @@ class Shift(BaseModel) :
             models.Index(fields=['start_day', 'start_time']),
             models.Index(fields=['end_day', 'end_time']),
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return f"{self.name} - {self.code}"
@@ -122,6 +127,7 @@ class Branch(BaseModel) :
         indexes = [
             models.Index(fields=['code'])
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return f"{self.name} - {self.code}"
@@ -153,7 +159,7 @@ class Employee(BaseModel) :
     job = models.CharField(max_length=36, null=True, blank=True)
     citizenship = models.CharField(max_length=36, null=True, blank=True)
 
-    company = models.ForeignKey('Company', on_delete=models.CASCADE, db_index=True)
+    company = models.ManyToManyField('Company', related_name='employees')
     branch = models.ForeignKey('Branch', on_delete=models.CASCADE, db_index=True)
     unit = models.ManyToManyField('Unit', related_name='units')
     level = models.ForeignKey('Level', on_delete=models.CASCADE, db_index=True)
@@ -174,9 +180,10 @@ class Employee(BaseModel) :
         managed = True
         verbose_name_plural = 'Employees'
         indexes = [
-            models.Index(fields=['company', 'branch']),
+            models.Index(fields=['branch']),
             models.Index(fields=['level'])
         ]
+        ordering = ['-id']
     
     def __str__(self):
         return f"{self.full_name} - {self.code}"

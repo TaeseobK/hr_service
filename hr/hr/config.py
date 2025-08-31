@@ -738,3 +738,29 @@ def get_users_from_auth(user_ids, timeout=300):
                 users_map[uid] = {"id": uid}
 
     return users_map
+
+def fetch_external_data(service_name, endpoint, key_suffix, timeout=3600, retries=2, fallback=True):
+    cache_key = f"{service_name}:{key_suffix}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    last_exception = None
+    for attempt in range(retries):
+        try:
+            response = requests.get(endpoint, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                cache.set(cache_key, data, timeout=timeout)
+                return data
+        except Exception as e:
+            last_exception = e
+
+    if fallback:
+        stale = cache.get(cache_key)
+        if stale:
+            print(f"[WARN] Service {service_name} down, using stale cache")
+            return stale
+
+    print(f"[ERROR] fetch_external_data({service_name}) failed: {last_exception}")
+    return None
