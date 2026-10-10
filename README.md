@@ -7,6 +7,7 @@ It integrates with **Auth Service** and **Finance Service**, uses multiple datab
 
 ## 📑 Table of Contents
 - [Introduction](#introduction)  
+- [Architecture](#architecture)  
 - [Features](#features)  
 - [Project Structure](#project-structure)  
 - [Installation](#installation)  
@@ -29,6 +30,18 @@ It integrates with:
 The service relies on Django REST Framework and **drf-spectacular** for schema generation and API documentation.
 
 ---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client["Client"] -->|login| Auth["auth_service :8000"]
+    HR["hr_service :8001"] -->|verify token| Auth
+    Fin["fin_service :8002"] -->|verify token| Auth
+    HR <-->|"employee / finance data"| Fin
+```
+
+The three services run separately; the ports above are the defaults from the example `local_settings.py`. The example configuration uses SQLite for local development. For a gateway-level example (per-field permissions, GraphQL, Redis Streams fan-out), see [graphql-gateway-demo](https://github.com/TaeseobK/graphql-gateway-demo).
 
 ## ✨ Features
 - **Token-based authentication** via Auth Service  
@@ -63,8 +76,8 @@ hr_service/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-repo/hr-service.git
-   cd hr-service
+   git clone https://github.com/TaeseobK/hr_service.git
+   cd hr_service
    ```
 
 2. **Create and activate a virtual environment**
